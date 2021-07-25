@@ -1,116 +1,138 @@
----
-title: "Creating a Shiny App"
-output: github_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+Creating a Shiny App
+================
 
 ### A typical data challenge
 
-You want to create a visualisation of a publicly available *data source* in order for people (end users) to adjust and gain some *insight* from the tool. 
+You want to create a visualisation of a publicly available *data source*
+in order for people (end users) to adjust and gain some *insight* from
+the tool.
 
 ### An example
 
-Want to provide something to spark possible collaboration between QUT researchers based on publicly available data. Looking around QUT eprints is a great source! 
+Want to provide something to spark possible collaboration between QUT
+researchers based on publicly available data. Looking around QUT eprints
+is a great source!
 
     Goal: Create a visuallisation of QUT researchers that people can view and interact with to find common coauthors
 
-Need to get the data *(Web Scraping)* visualise it *(Network)* and provide something interactive *(Shiny)*.
+Need to get the data *(Web Scraping)* visualise it *(Network)* and
+provide something interactive *(Shiny)*.
 
-Example end product: https://matt-sutton.shinyapps.io/CDSNetwork/ 
+Example end product: <https://matt-sutton.shinyapps.io/CDSNetwork/>
 
-### Tools we'll need
+### Tools we’ll need
 
-R and Rstudio are my preferred software if you work with Python you may be interested in beautiful soup and pyvis.
+R and Rstudio are my preferred software if you work with Python you may
+be interested in beautiful soup and pyvis.
 
 Install and load the required packages:
 
-```{r, eval=FALSE}
+``` r
 install.packages("shiny")
 install.packages("visNetwork")
 install.packages("rvest")
 ```
 
-You'll also need the following Chrome Extension (https://selectorgadget.com/). Don't worry if  you can't get this one in the session you should be able to create the app without it. 
+You’ll also need the following Chrome Extension
+(<https://selectorgadget.com/>). Don’t worry if you can’t get this one
+in the session you should be able to create the app without it.
 
 ### Important references
 
-To build this tool and tutorial I made use of the excellent tutorials by SAURAV KAUSHIK [1] for web scraping with R, ?? for building a shiny app and ?? for visualizing data with a network. 
+To build this tool and tutorial I made use of the excellent tutorials by
+SAURAV KAUSHIK \[1\] for web scraping with R, ?? for building a shiny
+app and ?? for visualizing data with a network.
 
-## Web Scraping 
+## Web Scraping
 
-Web scraping opens up the possibilities working with data and creating data sources. You might consider:
+Web scraping opens up the possibilities working with data and creating
+data sources. You might consider:
 
-1. scraping to generate data for recommender systems
-2. scraping for sentiment analysis 
-3. scraping data to build classification systems
+1.  scraping to generate data for recommender systems
+2.  scraping for sentiment analysis
+3.  scraping data to build classification systems
 
 There are several ways in which you can scrape data:
 
-+ Copy-Paste
-+ Application Programming Interface (API)
-+ Document Object Model (DOM) - An API for HTML and XML documents
+-   Copy-Paste
+-   Application Programming Interface (API)
+-   Document Object Model (DOM) - An API for HTML and XML documents
 
-The best way to deal with data is to use an API that the website of interest has made available. In addition I'd mention that it is good practice to check the website robot.txt, read the terms and conditions of the website and scrape with moderate speed. 
+The best way to deal with data is to use an API that the website of
+interest has made available. In addition I’d mention that it is good
+practice to check the website robot.txt, read the terms and conditions
+of the website and scrape with moderate speed.
 
 ![](robot.PNG)
 
-There are best practices and you should try to get all data ethically [2].
-![https://soshace.com/responsible-web-scraping-gathering-data-ethically-and-legally/](responsibleWeb.jpg)
+There are best practices and you should try to get all data ethically
+\[2\].
+![<https://soshace.com/responsible-web-scraping-gathering-data-ethically-and-legally/>](responsibleWeb.jpg)
 
 ### Scraping with R
 
-Lets get some data! 
-This process follows along with the steps from [1].
+Lets get some data! This process follows along with the steps from
+\[1\].
 
-*Step 1:*
-Try the following commands:
+*Step 1:* Try the following commands:
 
-```{r}
+``` r
 library(rvest)
+```
 
+    ## Loading required package: xml2
+
+``` r
 url <- "https://eprints.qut.edu.au/view/person/Mengersen,_Kerrie.html" 
 
 scraped_html <- read_html(url)
 ```
 
-This url contains the information of our centre director Distinguished Professor Kerrie Mengersen. In `scraped_html` we have access to all metadata on Kerrie's QUT published papers. This includes:
+This url contains the information of our centre director Distinguished
+Professor Kerrie Mengersen. In `scraped_html` we have access to all
+metadata on Kerrie’s QUT published papers. This includes:
 
-1. Co-authors
-2. Journals
-3. Published year
-4. Article Name
+1.  Co-authors
+2.  Journals
+3.  Published year
+4.  Article Name
 
 *Step 2:*
 
-To access pull this information out from the document we need to use the selector gadget. Click the extension link and select the relevant fields. 
+To access pull this information out from the document we need to use the
+selector gadget. Click the extension link and select the relevant
+fields.
 
 ![](selector1.PNG)
 
-Make sure that only the relevant part is selected - here a coauthor from a recent paper. By clicking multiple times it is possible to refine this selection. The text at the bottom is the required selector to get this information from our `scraped_html` object. For co-authors it's `.person_name`.
+Make sure that only the relevant part is selected - here a coauthor from
+a recent paper. By clicking multiple times it is possible to refine this
+selection. The text at the bottom is the required selector to get this
+information from our `scraped_html` object. For co-authors it’s
+`.person_name`.
 
 *Step 3:*
 
 Using the selector you can grab the relevant part from the R object:
 
-```{r}
+``` r
 co_authors_html <- html_nodes(scraped_html, ".person_name")
 
 # Convert this to text
 co_authors_text <- unique(html_text(co_authors_html))
 ```
 
-You can use this to see the number of unique coauthors `length(co_authors_text)` (740) and other statistics.
+You can use this to see the number of unique coauthors
+`length(co_authors_text)` (740) and other statistics.
 
 ## Building something with the data
 
-Now that data can be pulled we can start finding something interesting to visualise. 
+Now that data can be pulled we can start finding something interesting
+to visualise.
 
 Grab the data from two authors:
 
-```{r}
+``` r
 url <- "https://eprints.qut.edu.au/view/person/Mengersen,_Kerrie.html" 
 scraped_html <- read_html(url)
 co_authors_html <- html_nodes(scraped_html, ".person_name")
@@ -122,12 +144,19 @@ co_authors_html <- html_nodes(scraped_html, ".person_name")
 jv_coauthors <- unique(html_text(co_authors_html))
 ```
 
-We'll make a visualisation of the shared coauthors. Great visualisations are possible using the R package visNetwork [3]. 
+We’ll make a visualisation of the shared coauthors. Great visualisations
+are possible using the R package visNetwork \[3\].
 
-The following code sets up a set of nodes for the shared authors and edges between those who have worked together. 
+The following code sets up a set of nodes for the shared authors and
+edges between those who have worked together.
 
-```{r}
+``` r
 library(visNetwork)
+```
+
+    ## Warning: package 'visNetwork' was built under R version 4.0.5
+
+``` r
 names <- c("Mengersen, Kerrie", "Vercelloni, Julie")
 nodes <- unique(intersect(jv_coauthors, km_coauthors))
 
@@ -140,16 +169,25 @@ nodes <- data.frame(id = nodes, label = nodes,
 visNetwork(nodes, edges, width = "100%")
 ```
 
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
 ## Creating a Shiny App
 
-Now that we have some basic code that can pull data from the web and generate a visualisation the next step is to make it interactive. This is where Shiny comes in. A great resource for Shiny is [3] which gives a lot of background and extra information. 
+Now that we have some basic code that can pull data from the web and
+generate a visualisation the next step is to make it interactive. This
+is where Shiny comes in. A great resource for Shiny is \[3\] which gives
+a lot of background and extra information.
 
-A Shiny app is a way to build interactive web applications from R that you can publish online. 
+A Shiny app is a way to build interactive web applications from R that
+you can publish online.
 
-Shiny apps consist of two main parts: a user interface (ui) and a server function. The following snippit creates a shiny app with a ui consisting of a title, sidebar and main panel rendering a plot.
+Shiny apps consist of two main parts: a user interface (ui) and a server
+function. The following snippit creates a shiny app with a ui consisting
+of a title, sidebar and main panel rendering a plot.
 
 UI:
-```{r}
+
+``` r
 library(shiny)
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
@@ -176,9 +214,9 @@ ui <- fluidPage(
 )
 ```
 
-The server does all the processing to render the content for th ui. 
+The server does all the processing to render the content for th ui.
 
-```{r}
+``` r
 server <- function(input, output) {
   output$network <- renderVisNetwork({
     # minimal example
@@ -198,17 +236,21 @@ server <- function(input, output) {
 }
 ```
 
-This can then be generated using the function `shinyApp(ui = ui, server = server)`.
+This can then be generated using the function
+`shinyApp(ui = ui, server = server)`.
 
-```{r, echo=FALSE}
-shinyApp(ui = ui, server = server)
-```
+    ## 
+    ## Listening on http://127.0.0.1:8582
+
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ## Putting it together
 
-Building off the UI from the previous section we can replace the sidebar part with a text input box that accepts user names and a main panel that renders the Network output. 
+Building off the UI from the previous section we can replace the sidebar
+part with a text input box that accepts user names and a main panel that
+renders the Network output.
 
-```{r}
+``` r
 library(shiny)
 require(visNetwork)
 # Define UI ----
@@ -243,9 +285,12 @@ ui <- fluidPage(
 )
 ```
 
-The server function takes in the input from the text box grabs the HTML from the relevant webpages. Code then processes the scrapped data into the form suited for visNetwork. This is then rendered on the visNetwork graph. 
+The server function takes in the input from the text box grabs the HTML
+from the relevant webpages. Code then processes the scrapped data into
+the form suited for visNetwork. This is then rendered on the visNetwork
+graph.
 
-```{r}
+``` r
 server = function(input, output) {
   output$network <- renderVisNetwork({
     # minimal example
@@ -305,10 +350,17 @@ server = function(input, output) {
 shinyApp(ui = ui, server = server)
 ```
 
+    ## 
+    ## Listening on http://127.0.0.1:7010
+
+![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
 ## References:
 
-1. SAURAV KAUSHIK, March, 2017: https://www.analyticsvidhya.com/blog/2017/03/beginners-guide-on-web-scraping-in-r-using-rvest-with-hands-on-knowledge/
+1.  SAURAV KAUSHIK, March, 2017:
+    <https://www.analyticsvidhya.com/blog/2017/03/beginners-guide-on-web-scraping-in-r-using-rvest-with-hands-on-knowledge/>
 
-2. DENIS KRYUKOV,September, 2019: https://soshace.com/responsible-web-scraping-gathering-data-ethically-and-legally/
+2.  DENIS KRYUKOV,September, 2019:
+    <https://soshace.com/responsible-web-scraping-gathering-data-ethically-and-legally/>
 
-3. https://datastorm-open.github.io/visNetwork/
+3.  <https://datastorm-open.github.io/visNetwork/>
